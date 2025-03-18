@@ -112,9 +112,8 @@ jobs:
             const unhealthyApis = results.filter(r => !r.healthy);
             
             if (unhealthyApis.length > 0) {
-              console.log('::set-output name=has_failures::true');
-              console.log('::set-output name=failure_details::' + 
-                encodeURIComponent(JSON.stringify(unhealthyApis)));
+              console.log('has_failures=true');
+              console.log('failure_details=' + encodeURIComponent(JSON.stringify(unhealthyApis)));
                 
               let emailBody = 'The following APIs are not healthy:\n\n';
               unhealthyApis.forEach(api => {
@@ -123,9 +122,9 @@ jobs:
                 emailBody += `Error: ${api.error}\n\n`;
               });
               
-              console.log('::set-output name=email_body::' + encodeURIComponent(emailBody));
+              console.log('email_body=' + encodeURIComponent(emailBody));
             } else {
-              console.log('::set-output name=has_failures::false');
+              console.log('has_failures=false');
               console.log('All APIs are healthy');
             }
           }
