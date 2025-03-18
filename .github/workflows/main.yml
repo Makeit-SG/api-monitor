@@ -2,7 +2,7 @@ name: API Health Monitor
 
 on:
   schedule:
-    - cron: '*/15 * * * *'  # Run every 10 minutes (reduced frequency)
+    - cron: '*/25 * * * *'  # Run every 10 minutes (reduced frequency)
   workflow_dispatch:  # Allow manual trigger
   push:               # Add push trigger for testing
     branches:
