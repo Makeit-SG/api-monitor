@@ -140,15 +140,19 @@ jobs:
         run: |
           node monitor-apis.js >> $GITHUB_OUTPUT
       
-      - name: Send email alert
+      - name: Send alert to Pumble
         if: steps.api-check.outputs.has_failures == 'true'
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: ${{ secrets.MAIL_SERVER }}
-          server_port: ${{ secrets.MAIL_PORT }}
-          username: ${{ secrets.MAIL_USERNAME }}
-          password: ${{ secrets.MAIL_PASSWORD }}
-          subject: "⚠️ API Health Alert"
-          to: vikash@makeit.sg,chanuka@qbitum.com
-          from: GitHub API Monitor <noreply@github.com>
-          body: ${{ steps.api-check.outputs.email_body }}
+        run: |
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            -d '{
+              "text": "⚠️ API Health Alert",
+              "attachments": [
+                {
+                  "title": "API Health Monitor",
+                  "text": ${{ toJSON(steps.api-check.outputs.email_body) }},
+                  "color": "#FF0000"
+                }
+              ]
+            }' \
+            ${{ secrets.PUMBLE_WEBHOOK_URL }}
