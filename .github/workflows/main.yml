@@ -2,12 +2,17 @@ name: API Health Monitor
 
 on:
   schedule:
-    - cron: '*/5 * * * *'  # Run every 5 minutes
+    - cron: '*/15 * * * *'  # Run every 10 minutes (reduced frequency)
   workflow_dispatch:  # Allow manual trigger
+  push:               # Add push trigger for testing
+    branches:
+      - main          # or your default branch name
 
 jobs:
   monitor-apis:
     runs-on: ubuntu-latest
+    # Add timeout to prevent hung jobs
+    timeout-minutes: 5
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -125,7 +130,7 @@ jobs:
               console.log('email_body=' + encodeURIComponent(emailBody));
             } else {
               console.log('has_failures=false');
-              console.log('All APIs are healthy');
+              console.log('status=All APIs are healthy');
             }
           }
           
@@ -138,7 +143,23 @@ jobs:
       - name: Run API checks
         id: api-check
         run: |
-          node monitor-apis.js >> $GITHUB_OUTPUT
+          # Create a temporary file for output
+          TEMP_OUTPUT=$(mktemp)
+          node monitor-apis.js > $TEMP_OUTPUT
+          
+          # Process the output and write to GITHUB_OUTPUT with correct format
+          while IFS= read -r line; do
+            # Extract key and value separated by '='
+            if [[ $line == *"="* ]]; then
+              echo "$line" >> $GITHUB_OUTPUT
+            else
+              # For lines without '=', add them with a default key
+              echo "info=$line" >> $GITHUB_OUTPUT
+            fi
+          done < $TEMP_OUTPUT
+          
+          # Clean up
+          rm $TEMP_OUTPUT
       
       - name: Send alert to Pumble
         if: steps.api-check.outputs.has_failures == 'true'
