@@ -162,7 +162,7 @@ jobs:
           rm $TEMP_OUTPUT
       
       - name: Send alert to Pumble
-        if: steps.api-check.outputs.has_failures == 'true'
+        if: steps.api-check.outputs.has_failures == 'false'
         run: |
           curl -X POST \
             -H "Content-Type: application/json" \
