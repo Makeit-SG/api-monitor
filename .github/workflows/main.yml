@@ -1,179 +1,179 @@
-name: API Health Monitor
+# name: API Health Monitor
 
-on:
-  schedule:
-    - cron: '*/25 * * * *'  # Run every 10 minutes (reduced frequency)
-  workflow_dispatch:  # Allow manual trigger
-  push:               # Add push trigger for testing
-    branches:
-      - main          # or your default branch name
+# on:
+#   schedule:
+#     - cron: '*/25 * * * *'  # Run every 10 minutes (reduced frequency)
+#   workflow_dispatch:  # Allow manual trigger
+#   push:               # Add push trigger for testing
+#     branches:
+#       - main          # or your default branch name
 
-jobs:
-  monitor-apis:
-    runs-on: ubuntu-latest
-    # Add timeout to prevent hung jobs
-    timeout-minutes: 5
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+# jobs:
+#   monitor-apis:
+#     runs-on: ubuntu-latest
+#     # Add timeout to prevent hung jobs
+#     timeout-minutes: 5
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v4
       
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+#       - name: Setup Node.js
+#         uses: actions/setup-node@v4
+#         with:
+#           node-version: '20'
           
-      - name: Create monitoring script
-        run: |
-          cat > monitor-apis.js << 'EOF'
-          const https = require('https');
-          const http = require('http');
+#       - name: Create monitoring script
+#         run: |
+#           cat > monitor-apis.js << 'EOF'
+#           const https = require('https');
+#           const http = require('http');
           
-          // List of APIs to monitor
-          const apis = [
-            {
-              name: 'API 1',
-              url: 'https://gateway.makeitmes.com/api/stream/actuator/health/liveness',
-              expectedStatus: 200,
-              expectedContent: { status: 'UP' }
-            },
-            {
-              name: 'API 2',
-              url: 'https://gateway.makeitmes.com/api/consumer/actuator/health/liveness',
-              expectedStatus: 200,
-              expectedContent: { status: 'UP' }
-            }
-          ];
+#           // List of APIs to monitor
+#           const apis = [
+#             {
+#               name: 'API 1',
+#               url: 'https://gateway.makeitmes.com/api/stream/actuator/health/liveness',
+#               expectedStatus: 200,
+#               expectedContent: { status: 'UP' }
+#             },
+#             {
+#               name: 'API 2',
+#               url: 'https://gateway.makeitmes.com/api/consumer/actuator/health/liveness',
+#               expectedStatus: 200,
+#               expectedContent: { status: 'UP' }
+#             }
+#           ];
           
-          // Function to check a single API
-          async function checkApi(api) {
-            return new Promise((resolve) => {
-              const protocol = api.url.startsWith('https') ? https : http;
-              const req = protocol.get(api.url, (res) => {
-                let data = '';
-                res.on('data', (chunk) => { data += chunk; });
-                res.on('end', () => {
-                  try {
-                    const statusOk = res.statusCode === api.expectedStatus;
-                    let contentOk = true;
-                    let contentError = null;
+#           // Function to check a single API
+#           async function checkApi(api) {
+#             return new Promise((resolve) => {
+#               const protocol = api.url.startsWith('https') ? https : http;
+#               const req = protocol.get(api.url, (res) => {
+#                 let data = '';
+#                 res.on('data', (chunk) => { data += chunk; });
+#                 res.on('end', () => {
+#                   try {
+#                     const statusOk = res.statusCode === api.expectedStatus;
+#                     let contentOk = true;
+#                     let contentError = null;
                     
-                    if (api.expectedContent) {
-                      try {
-                        const jsonData = JSON.parse(data);
-                        // Check if expected content matches
-                        if (api.expectedContent.status && jsonData.status !== api.expectedContent.status) {
-                          contentOk = false;
-                          contentError = `Expected status "${api.expectedContent.status}" but got "${jsonData.status}"`;
-                        }
-                      } catch (e) {
-                        contentOk = false;
-                        contentError = "Invalid JSON response";
-                      }
-                    }
+#                     if (api.expectedContent) {
+#                       try {
+#                         const jsonData = JSON.parse(data);
+#                         // Check if expected content matches
+#                         if (api.expectedContent.status && jsonData.status !== api.expectedContent.status) {
+#                           contentOk = false;
+#                           contentError = `Expected status "${api.expectedContent.status}" but got "${jsonData.status}"`;
+#                         }
+#                       } catch (e) {
+#                         contentOk = false;
+#                         contentError = "Invalid JSON response";
+#                       }
+#                     }
                     
-                    resolve({
-                      name: api.name,
-                      url: api.url,
-                      healthy: statusOk && contentOk,
-                      statusCode: res.statusCode,
-                      data: data.substring(0, 100) + (data.length > 100 ? '...' : ''),
-                      error: !statusOk ? `Expected status ${api.expectedStatus} but got ${res.statusCode}` : contentError
-                    });
-                  } catch (e) {
-                    resolve({
-                      name: api.name,
-                      url: api.url,
-                      healthy: false,
-                      error: `Exception: ${e.message}`
-                    });
-                  }
-                });
-              });
+#                     resolve({
+#                       name: api.name,
+#                       url: api.url,
+#                       healthy: statusOk && contentOk,
+#                       statusCode: res.statusCode,
+#                       data: data.substring(0, 100) + (data.length > 100 ? '...' : ''),
+#                       error: !statusOk ? `Expected status ${api.expectedStatus} but got ${res.statusCode}` : contentError
+#                     });
+#                   } catch (e) {
+#                     resolve({
+#                       name: api.name,
+#                       url: api.url,
+#                       healthy: false,
+#                       error: `Exception: ${e.message}`
+#                     });
+#                   }
+#                 });
+#               });
               
-              req.on('error', (e) => {
-                resolve({
-                  name: api.name,
-                  url: api.url,
-                  healthy: false,
-                  error: `Request failed: ${e.message}`
-                });
-              });
+#               req.on('error', (e) => {
+#                 resolve({
+#                   name: api.name,
+#                   url: api.url,
+#                   healthy: false,
+#                   error: `Request failed: ${e.message}`
+#                 });
+#               });
               
-              req.setTimeout(10000, () => {
-                req.abort();
-                resolve({
-                  name: api.name,
-                  url: api.url,
-                  healthy: false,
-                  error: 'Request timeout (10s)'
-                });
-              });
-            });
-          }
+#               req.setTimeout(10000, () => {
+#                 req.abort();
+#                 resolve({
+#                   name: api.name,
+#                   url: api.url,
+#                   healthy: false,
+#                   error: 'Request timeout (10s)'
+#                 });
+#               });
+#             });
+#           }
           
-          // Main function
-          async function main() {
-            const results = await Promise.all(apis.map(checkApi));
-            const unhealthyApis = results.filter(r => !r.healthy);
+#           // Main function
+#           async function main() {
+#             const results = await Promise.all(apis.map(checkApi));
+#             const unhealthyApis = results.filter(r => !r.healthy);
             
-            if (unhealthyApis.length > 0) {
-              console.log('has_failures=true');
-              console.log('failure_details=' + encodeURIComponent(JSON.stringify(unhealthyApis)));
+#             if (unhealthyApis.length > 0) {
+#               console.log('has_failures=true');
+#               console.log('failure_details=' + encodeURIComponent(JSON.stringify(unhealthyApis)));
                 
-              let emailBody = 'The following APIs are not healthy:\n\n';
-              unhealthyApis.forEach(api => {
-                emailBody += `API: ${api.name}\n`;
-                emailBody += `URL: ${api.url}\n`;
-                emailBody += `Error: ${api.error}\n\n`;
-              });
+#               let emailBody = 'The following APIs are not healthy:\n\n';
+#               unhealthyApis.forEach(api => {
+#                 emailBody += `API: ${api.name}\n`;
+#                 emailBody += `URL: ${api.url}\n`;
+#                 emailBody += `Error: ${api.error}\n\n`;
+#               });
               
-              console.log('email_body=' + encodeURIComponent(emailBody));
-            } else {
-              console.log('has_failures=false');
-              console.log('status=All APIs are healthy');
-            }
-          }
+#               console.log('email_body=' + encodeURIComponent(emailBody));
+#             } else {
+#               console.log('has_failures=false');
+#               console.log('status=All APIs are healthy');
+#             }
+#           }
           
-          main().catch(err => {
-            console.error('Error in monitoring script:', err);
-            process.exit(1);
-          });
-          EOF
+#           main().catch(err => {
+#             console.error('Error in monitoring script:', err);
+#             process.exit(1);
+#           });
+#           EOF
       
-      - name: Run API checks
-        id: api-check
-        run: |
-          # Create a temporary file for output
-          TEMP_OUTPUT=$(mktemp)
-          node monitor-apis.js > $TEMP_OUTPUT
+#       - name: Run API checks
+#         id: api-check
+#         run: |
+#           # Create a temporary file for output
+#           TEMP_OUTPUT=$(mktemp)
+#           node monitor-apis.js > $TEMP_OUTPUT
           
-          # Process the output and write to GITHUB_OUTPUT with correct format
-          while IFS= read -r line; do
-            # Extract key and value separated by '='
-            if [[ $line == *"="* ]]; then
-              echo "$line" >> $GITHUB_OUTPUT
-            else
-              # For lines without '=', add them with a default key
-              echo "info=$line" >> $GITHUB_OUTPUT
-            fi
-          done < $TEMP_OUTPUT
+#           # Process the output and write to GITHUB_OUTPUT with correct format
+#           while IFS= read -r line; do
+#             # Extract key and value separated by '='
+#             if [[ $line == *"="* ]]; then
+#               echo "$line" >> $GITHUB_OUTPUT
+#             else
+#               # For lines without '=', add them with a default key
+#               echo "info=$line" >> $GITHUB_OUTPUT
+#             fi
+#           done < $TEMP_OUTPUT
           
-          # Clean up
-          rm $TEMP_OUTPUT
+#           # Clean up
+#           rm $TEMP_OUTPUT
       
-      - name: Send alert to Pumble
-        if: steps.api-check.outputs.has_failures == 'true'
-        run: |
-          curl -X POST \
-            -H "Content-Type: application/json" \
-            -d '{
-              "text": "⚠️ API Health Alert",
-              "attachments": [
-                {
-                  "title": "API Health Monitor",
-                  "text": ${{ toJSON(steps.api-check.outputs.email_body) }},
-                  "color": "#FF0000"
-                }
-              ]
-            }' \
-            ${{ secrets.PUMBLE_WEBHOOK_URL }}
+#       - name: Send alert to Pumble
+#         if: steps.api-check.outputs.has_failures == 'true'
+#         run: |
+#           curl -X POST \
+#             -H "Content-Type: application/json" \
+#             -d '{
+#               "text": "⚠️ API Health Alert",
+#               "attachments": [
+#                 {
+#                   "title": "API Health Monitor",
+#                   "text": ${{ toJSON(steps.api-check.outputs.email_body) }},
+#                   "color": "#FF0000"
+#                 }
+#               ]
+#             }' \
+#             ${{ secrets.PUMBLE_WEBHOOK_URL }}
